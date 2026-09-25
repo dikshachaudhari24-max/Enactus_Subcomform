@@ -34,15 +34,39 @@ var HEADERS = [
   'Why Join Enactus',
   'Social Impact',
   'Creative Portfolio / Work Link',
+  'Project / Technical Work Link',
   'Application Year'
 ];
+
+/* The previous layout had no "Project / Technical Work Link" column.
+   Rows read from a file in that layout are migrated on the fly. */
+var LEGACY_COLUMN_COUNT = 11;
+var PROJECT_LINK_INDEX = 10;
 
 var BRANCHES = ['CE', 'CSE', 'EXTC'];
 
 /* The only six domains that may be stored, in canonical display form.
-   Incoming values are matched case-insensitively, so "TECH", "tech" and
-   "Tech" all normalise to "Tech". Anything else is discarded. */
-var DOMAIN_LABELS = ['PR', 'Marketing', 'Creatives', 'Social Media', 'Tech', 'Projects', 'Operations'];
+   Incoming values are matched case-insensitively, so "TECH & PROJECTS",
+   "tech & projects" and "Tech & Projects" all normalise to the same
+   label. Anything else is discarded. */
+var DOMAIN_LABELS = ['PR', 'Marketing', 'Creatives', 'Social Media', 'Tech & Projects', 'Operations'];
+
+/* Tech and Projects used to be separate domains. Records already stored
+   under the old names still count towards the merged one. */
+var DOMAIN_ALIASES = {
+  'TECH': 'Tech & Projects',
+  'PROJECTS': 'Tech & Projects'
+};
+
+/* Maps any incoming spelling to its canonical label, or '' if unknown. */
+function canonicalDomain(raw) {
+  var want = str(raw).trim().toUpperCase();
+  if (!want) return '';
+  for (var i = 0; i < DOMAIN_LABELS.length; i++) {
+    if (DOMAIN_LABELS[i].toUpperCase() === want) return DOMAIN_LABELS[i];
+  }
+  return DOMAIN_ALIASES.hasOwnProperty(want) ? DOMAIN_ALIASES[want] : '';
+}
 
 /* ===================================================================
    ONE-TIME SETUP
@@ -135,6 +159,7 @@ function validateAndBuildRow(d) {
   var whyJoin = str(d.whyJoin).replace(/[ \t]+/g, ' ').trim();
   var impact = str(d.socialImpact).replace(/[ \t]+/g, ' ').trim();
   var portfolio = str(d.portfolio).trim();
+  var workLink = str(d.workLink).trim();
 
   if (!/^(?=.*[A-Za-z])[A-Za-z][A-Za-z .'-]{1,49}$/.test(name)) {
     throw new Error('Please enter a valid name.');
@@ -161,19 +186,23 @@ function validateAndBuildRow(d) {
     throw new Error('Tell us a little more about the impact you want to create.');
   }
 
-  /* The portfolio link is only accepted alongside a Creatives choice,
-     and is optional even then. */
-  /* Compare case-insensitively: `domains` holds canonical display
-     labels ("Creatives"), not upper-case ones. */
-  var wantsCreatives = domains.join('|').toUpperCase().indexOf('CREATIVES') !== -1;
-  if (!wantsCreatives) {
+  /* Each work link is only accepted alongside its own domain, and is
+     optional even then. The two are independent. */
+  if (domains.indexOf('Creatives') === -1) {
     portfolio = '';
   } else if (portfolio && !isHttpUrl(portfolio)) {
     throw new Error('The portfolio link must be a valid http:// or https:// URL.');
   }
 
+  if (domains.indexOf('Tech & Projects') === -1) {
+    workLink = '';
+  } else if (workLink && !isHttpUrl(workLink)) {
+    throw new Error('The project link must be a valid http:// or https:// URL.');
+  }
+
   /* Bound every free-text field so a single row cannot be abused. */
-  if (whyJoin.length > 4000 || impact.length > 4000 || portfolio.length > 600) {
+  if (whyJoin.length > 4000 || impact.length > 4000 ||
+      portfolio.length > 600 || workLink.length > 600) {
     throw new Error('One of your answers is too long.');
   }
 
@@ -188,6 +217,7 @@ function validateAndBuildRow(d) {
     whyJoin,
     impact,
     portfolio,
+    workLink,
     APPLICATION_YEAR
   ];
 }
@@ -208,13 +238,8 @@ function normalizeDomains(input) {
 
   var seen = {};
   parts.forEach(function (p) {
-    var incoming = p.trim().toUpperCase();
-    for (var i = 0; i < DOMAIN_LABELS.length; i++) {
-      if (DOMAIN_LABELS[i].toUpperCase() === incoming) {
-        seen[DOMAIN_LABELS[i]] = true;   // store the canonical display form
-        break;
-      }
-    }
+    var label = canonicalDomain(p);
+    if (label) seen[label] = true;       // store the canonical display form
   });
 
   return DOMAIN_LABELS.filter(function (label) { return seen[label]; });
@@ -363,11 +388,32 @@ function extractRecords(text) {
     if (!r || r.length < 2) continue;                  // blank line
     if (!str(r[0]).trim() || !str(r[1]).trim()) continue;  // no timestamp/name
 
-    // normalise to exactly the column count, un-doing the injection guard
-    var rec = [];
-    for (var c2 = 0; c2 < HEADERS.length; c2++) {
-      rec.push(stripInjectionGuard(str(r[c2])));
+    // un-do the injection guard on every stored value
+    var raw = [];
+    for (var c2 = 0; c2 < r.length; c2++) {
+      raw.push(stripInjectionGuard(str(r[c2])));
     }
+
+    /* A row written before the project-link column existed has the
+       application year where that column now sits. Insert an empty link
+       so the year stays in the last column. */
+    if (raw.length === LEGACY_COLUMN_COUNT) {
+      raw.splice(PROJECT_LINK_INDEX, 0, '');
+    }
+
+    // normalise to exactly the current column count
+    var rec = [];
+    for (var c3 = 0; c3 < HEADERS.length; c3++) {
+      rec.push(raw[c3] === undefined ? '' : raw[c3]);
+    }
+
+    /* Rewrite the stored domain list through the canonical labels, so
+       records saved under the old separate "Tech"/"Projects" names are
+       migrated to "Tech & Projects" rather than lingering in the file.
+       Left untouched if nothing recognisable is stored. */
+    var migrated = normalizeDomains(rec[6]).join(', ');
+    if (migrated) rec[6] = migrated;
+
     records.push(rec);
   }
   return records;
@@ -405,15 +451,10 @@ function calculateStats(records) {
     var picked = str(records[i][6]).split(',');
     var seen = {};
     for (var p = 0; p < picked.length; p++) {
-      var want = picked[p].trim().toUpperCase();
-      if (!want || seen[want]) continue;
-      seen[want] = true;
-      for (var q = 0; q < DOMAIN_LABELS.length; q++) {
-        if (DOMAIN_LABELS[q].toUpperCase() === want) {
-          stats.domains[DOMAIN_LABELS[q]]++;
-          break;
-        }
-      }
+      var label = canonicalDomain(picked[p]);
+      if (!label || seen[label]) continue;
+      seen[label] = true;
+      stats.domains[label]++;
     }
   }
   return stats;

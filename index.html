@@ -317,6 +317,22 @@
         </div>
       </div>
 
+      <!-- ---------- conditional: tech & projects only ---------- -->
+      <div class="form__section conditional" id="techprojects-section" hidden>
+        <p class="form__legend">SHOW US WHAT YOU'VE BUILT</p>
+        <div class="field">
+          <p class="field__help">
+            You selected Tech &amp; Projects &mdash; share something you've built or worked on.
+            A GitHub repo, a deployed site, a Drive folder or a write-up all work. Optional.
+          </p>
+          <label class="field__label" for="field-worklink">PROJECT / TECHNICAL WORK LINK</label>
+          <input type="url" id="field-worklink" name="workLink" placeholder="https://github.com/..."
+                 autocomplete="off" spellcheck="false" inputmode="url"
+                 aria-describedby="err-worklink">
+          <span class="field__error" id="err-worklink"></span>
+        </div>
+      </div>
+
       <p class="form-alert" id="submit-alert" role="alert"></p>
 
       <div class="form__actions">

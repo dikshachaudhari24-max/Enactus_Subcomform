@@ -90,29 +90,16 @@
             </g>`
     },
     {
-      id: 'tech',
-      name: 'THE BUILDER',
-      label: 'TECH',
-      csv: 'Tech',
+      id: 'techprojects',
+      name: 'THE INNOVATOR',
+      label: 'TECH & PROJECTS',
+      csv: 'Tech & Projects',
       accent: '#1fa8a0',
-      desc: 'Build the tools, ship the code and power the whole mission.',
+      desc: 'Build the tools, ship the code and turn ideas into real social impact.',
       art: `<g class="float-art">
               <rect x="4" y="7" width="34" height="24" fill="#1a1a2e" stroke="#1fa8a0" stroke-width="2.6"/>
               <path d="M12 15 8 19l4 4M30 15l4 4-4 4M24 13l-6 12" fill="none" stroke="#fbd000" stroke-width="2.6" stroke-linecap="square"/>
               <rect x="13" y="33" width="16" height="4" fill="#1fa8a0"/>
-            </g>`
-    },
-    {
-      id: 'projects',
-      name: 'THE CHANGEMAKER',
-      label: 'PROJECTS',
-      csv: 'Projects',
-      accent: '#3cb043',
-      desc: 'Turn ideas into real, measurable social impact on the ground.',
-      art: `<g class="float-art">
-              <circle cx="21" cy="21" r="15" fill="#2f6fe4" stroke="#1a1a2e" stroke-width="2.4"/>
-              <path d="M8 16c5 2 7-2 11 0s4 5 9 3M9 27c6-1 8 3 13 1s5-4 10-3" fill="none" stroke="#3cb043" stroke-width="2.8"/>
-              <path d="M21 6v30" stroke="#1a1a2e" stroke-width="1.6" opacity=".45"/>
             </g>`
     },
     {
@@ -129,6 +116,13 @@
               <path d="M14 28l3 3 6-6" fill="none" stroke="#3cb043" stroke-width="2.8" stroke-linecap="square"/>
             </g>`
     }
+  ];
+
+  /* Optional work-link fields that appear only when their domain is
+     selected. Each entry is independent of the others. */
+  const CONDITIONAL_FIELDS = [
+    { domainId: 'creatives',    sectionId: 'creatives-section',    inputId: 'field-portfolio' },
+    { domainId: 'techprojects', sectionId: 'techprojects-section', inputId: 'field-worklink' }
   ];
 
   const BRANCHES = ['CE', 'CSE', 'EXTC'];
@@ -511,15 +505,17 @@
         });
       }
 
-      /* The Creatives portfolio section exists only while Creatives is on. */
-      const creatives = selected.has('creatives');
-      const section = $('creatives-section');
-      const input = $('field-portfolio');
-      section.hidden = !creatives;
-      if (!creatives) {
-        input.value = '';
-        Validate.clearField('field-portfolio');
-      }
+      /* Each conditional work-link section exists only while its own
+         domain is selected. They are independent: picking both Creatives
+         and Tech & Projects shows both fields. */
+      CONDITIONAL_FIELDS.forEach((c) => {
+        const on = selected.has(c.domainId);
+        $(c.sectionId).hidden = !on;
+        if (!on) {
+          $(c.inputId).value = '';
+          Validate.clearField(c.inputId);
+        }
+      });
     };
 
     const list_ = () => DOMAINS.filter((d) => selected.has(d.id));
@@ -680,14 +676,22 @@
         test: (v) => !v.trim() || isHttpUrl(v),
         msg: 'ENTER A VALID LINK STARTING WITH HTTPS://',
         optional: true
+      },
+      'field-worklink': {
+        test: (v) => !v.trim() || isHttpUrl(v),
+        msg: 'ENTER A VALID LINK STARTING WITH HTTPS://',
+        optional: true
       }
     };
 
     /* Required ids, in DOM order — drives progress and focus-first-error. */
     const REQUIRED = Object.keys(RULES).filter((id) => !RULES[id].optional);
 
-    const isActive = (id) =>
-      id !== 'field-portfolio' || Domains.has('creatives');
+    /* A conditional field is only validated while its domain is selected. */
+    const isActive = (id) => {
+      const cond = CONDITIONAL_FIELDS.filter((c) => c.inputId === id)[0];
+      return !cond || Domains.has(cond.domainId);
+    };
 
     const setState = (id, ok, msg) => {
       const input = $(id);
@@ -736,8 +740,9 @@
       return ok;
     };
 
-    const all = () => REQUIRED.map((id) => field(id)).every(Boolean) &&
-                      field('field-portfolio');
+    /* field() returns true for any conditional field whose domain is not
+       selected, so this covers required and optional rules alike. */
+    const all = () => Object.keys(RULES).map((id) => field(id)).every(Boolean);
 
     const refreshProgress = () => {
       const done = REQUIRED.filter((id) => RULES[id].test($(id).value)).length +
@@ -828,7 +833,9 @@
       domains: Domains.toPayload(),
       whyJoin: $('field-why').value.trim(),
       socialImpact: $('field-impact').value.trim(),
+      /* Each work link is sent only when its own domain is selected. */
       portfolio: Domains.has('creatives') ? $('field-portfolio').value.trim() : '',
+      workLink: Domains.has('techprojects') ? $('field-worklink').value.trim() : '',
       applicationYear: APPLICATION_YEAR
     });
 
@@ -951,8 +958,11 @@
   ================================================================= */
   function resetApplication() {
     $('application-form').reset();
-    $('field-portfolio').value = '';       // explicit: must never be prefilled
-    $('creatives-section').hidden = true;
+    /* explicit: the work-link fields must never be prefilled */
+    CONDITIONAL_FIELDS.forEach((c) => {
+      $(c.inputId).value = '';
+      $(c.sectionId).hidden = true;
+    });
     Domains.clear();
     Validate.reset();
     Alerts.clear('submit-alert');
