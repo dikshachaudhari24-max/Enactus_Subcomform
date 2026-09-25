@@ -962,6 +962,7 @@ body[data-mood="dusk"] .world::after { background: rgba(16, 14, 34, 0.46); }
 .domain-card:nth-child(4) { animation-delay: 0.22s; }
 .domain-card:nth-child(5) { animation-delay: 0.28s; }
 .domain-card:nth-child(6) { animation-delay: 0.34s; }
+.domain-card:nth-child(7) { animation-delay: 0.40s; }
 @keyframes card-enter {
   from { opacity: 0; transform: translateY(22px) scale(0.97); }
   to   { opacity: 1; transform: none; }
@@ -998,12 +999,18 @@ body[data-mood="dusk"] .world::after { background: rgba(16, 14, 34, 0.46); }
 
 .domain-card__text { min-width: 0; }
 .domain-card__role {
+  /* block, so the reserved space below actually constrains wrapping —
+     padding-right on an inline span would only affect its last line box */
+  display: block;
   font-family: var(--font-pixel);
   font-size: clamp(11px, 2.2vw, 14px);
   line-height: 1.5;
   color: var(--coin-gold);
   transform: translateZ(10px);
 }
+
+/* Keep the role name clear of the SELECTED stamp in the top-right corner. */
+.domain-card.is-selected .domain-card__role { padding-right: 98px; }
 .domain-card__label {
   display: inline-block;
   margin-top: 8px;
@@ -1065,6 +1072,31 @@ body[data-mood="dusk"] .world::after { background: rgba(16, 14, 34, 0.46); }
 .domain-card.is-selected .domain-card__stamp {
   opacity: 1;
   transform: scale(1) rotate(-6deg);
+}
+
+/* On one-column phone cards the text runs the full width, so reserving
+   space in the top-right is fragile for long role names. Move the stamp
+   to the bottom-left corner instead: the art column is vertically
+   centred, so that corner is always empty. */
+@media (max-width: 767px) {
+  /* A ribbon across the top edge, sitting above the card's content box,
+     so it cannot collide with the role name or the description however
+     they wrap. */
+  .domain-card__stamp {
+    /* the ribbon is ~32px tall, so -26px leaves its lower edge above the
+       card's 14px content padding and clear of the first text line */
+    top: -26px;
+    bottom: auto;
+    left: -4px;
+    right: -4px;
+    justify-content: center;
+    font-size: 7px;
+    padding: 4px 7px;
+  }
+  .domain-card.is-selected .domain-card__stamp { transform: scale(1); }
+  .domain-card.is-selected .domain-card__role { padding-right: 0; }
+  /* leave room for the ribbon so it never clips the card above */
+  .domain-grid { row-gap: 36px; }
 }
 
 /* ---------- selected summary ---------- */
@@ -1669,6 +1701,12 @@ body[data-mood="dusk"] .world::after { background: rgba(16, 14, 34, 0.46); }
   .domain-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 22px;
+  }
+  /* With an odd number of domains the final card would sit alone in the
+     left column. Let it span the full width instead, so the grid always
+     ends on a deliberate row rather than a gap. */
+  .domain-grid .domain-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
   }
   .domain-card {
     grid-template-columns: 86px 1fr;

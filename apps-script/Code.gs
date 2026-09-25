@@ -42,7 +42,7 @@ var BRANCHES = ['CE', 'CSE', 'EXTC'];
 /* The only six domains that may be stored, in canonical display form.
    Incoming values are matched case-insensitively, so "TECH", "tech" and
    "Tech" all normalise to "Tech". Anything else is discarded. */
-var DOMAIN_LABELS = ['PR', 'Marketing', 'Creatives', 'Social Media', 'Tech', 'Projects'];
+var DOMAIN_LABELS = ['PR', 'Marketing', 'Creatives', 'Social Media', 'Tech', 'Projects', 'Operations'];
 
 /* ===================================================================
    ONE-TIME SETUP

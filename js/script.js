@@ -114,6 +114,20 @@
               <path d="M8 16c5 2 7-2 11 0s4 5 9 3M9 27c6-1 8 3 13 1s5-4 10-3" fill="none" stroke="#3cb043" stroke-width="2.8"/>
               <path d="M21 6v30" stroke="#1a1a2e" stroke-width="1.6" opacity=".45"/>
             </g>`
+    },
+    {
+      id: 'operations',
+      name: 'THE ORGANISER',
+      label: 'OPERATIONS',
+      csv: 'Operations',
+      accent: '#d4467a',
+      desc: 'Keep every event, team and timeline running like clockwork.',
+      art: `<g class="float-art">
+              <rect x="9" y="7" width="24" height="29" fill="#fff8e7" stroke="#1a1a2e" stroke-width="2.4"/>
+              <rect x="15" y="3" width="12" height="7" fill="#d4467a" stroke="#1a1a2e" stroke-width="2.4"/>
+              <path d="M14 18l3 3 6-6" fill="none" stroke="#d4467a" stroke-width="2.8" stroke-linecap="square"/>
+              <path d="M14 28l3 3 6-6" fill="none" stroke="#3cb043" stroke-width="2.8" stroke-linecap="square"/>
+            </g>`
     }
   ];
 

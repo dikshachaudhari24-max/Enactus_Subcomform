@@ -113,6 +113,7 @@ it still opens cleanly in Sheets or Excel.
 "Social Media: 0"
 "Tech: 2"
 "Projects: 1"
+"Operations: 0"
 
 "APPLICANT DATA"
 "Timestamp","Name","Branch","UID","SPIT Email","Mobile Number","Preferred Domains","Why Join Enactus","Social Impact","Creative Portfolio / Work Link","Application Year"
